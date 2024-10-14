@@ -24,7 +24,7 @@ Prerequisites:
 Before deploying this setup, ensure the following tools are installed and properly configured:
 
 AWS CLI: Configured with appropriate access keys and permissions. 
-Terraform: Version vX.X.X or higher.
+Terraform: relevant version
 Tailscale Account: A working Tailscale account to manage your devices and Tailnet.
 SSH Key: A key pair created in AWS for accessing the EC2 instances.
 
