@@ -1,5 +1,5 @@
 # TailscaleTakeHome
-This project demonstrates the deployment of secure and private Tailscale subnet routers on AWS EC2 instances. The setup involves deploying EC2 instances through both Terraform and manual AWS configuration for testing purposes. All devices are connected to a Tailscale Tailnet, enabling private communication and routing between them.
+This assignment demonstrates the deployment of secure and private Tailscale subnet routers on AWS EC2 instances. The setup involves deploying EC2 instances through both Terraform and manual AWS configuration for testing purposes. All devices are connected to a Tailscale Tailnet, enabling private communication and routing between them.
 
 While the deployment was tested using two different methods, the focus remains on securely connecting and routing traffic across the Tailnet using Tailscale’s VPN service.
 
@@ -11,6 +11,7 @@ MacBook Device: A personal MacBook connected to the Tailnet using the Tailscale 
 Subnet Routing: All devices advertise their private subnets to the Tailnet, ensuring secure and seamless communication.
 
 Architecture
+
 The architecture includes:
 
 EC2 Instances:
@@ -19,7 +20,7 @@ Instance 2: Manually configured via AWS with public IP 54.165.243.182, also adve
 MacBook Device: Connected to the Tailnet using the Tailscale client, configured to advertise its private subnet 192.168.4.0/22
 Subnet Routing: All devices advertise their private subnets on Tailscale, ensuring secure routing of traffic between devices.
 
-Prerequisites
+Prerequisites: 
 Before deploying this setup, ensure the following tools are installed and properly configured:
 
 AWS CLI: Configured with appropriate access keys and permissions. 
@@ -28,7 +29,8 @@ Tailscale Account: A working Tailscale account to manage your devices and Tailne
 SSH Key: A key pair created in AWS for accessing the EC2 instances.
 
 
-Deployment Instructions
+Deployment Instructions:
+
 Step 1: Clone the Repository
 To start, clone this repository to your local machine:
 git clone https://github.com/Bavbav1/TailscaleTakeHome.git
@@ -40,6 +42,7 @@ The following files are provided to deploy an EC2 instance via Terraform:
 main.tf: Defines the EC2 instance and security group configuration.
 variables.tf: Contains configurable variables like the AWS region and SSH key name.
 outputs.tf: Outputs the public IP of the EC2 instance once deployed.
+
 Step 3: Customize Variables
 Before applying the Terraform configuration, update variables.tf to reflect your AWS settings:
 variable "aws_region" {
@@ -130,4 +133,4 @@ To delete the resources created by Terraform, run:
 terraform destroy
 
 Conclusion
-This project demonstrates the deployment of Tailscale subnet routers using Terraform on AWS EC2 instances and a MacBook, with all devices advertising their private subnets to the Tailnet. Both EC2 instances and the MacBook are securely connected through Tailscale, allowing seamless communication and routing across the network.
+This assignment demonstrates the deployment of Tailscale subnet routers using Terraform on AWS EC2 instances and a MacBook, with all devices advertising their private subnets to the Tailnet. Both EC2 instances and the MacBook are securely connected through Tailscale, allowing seamless communication and routing across the network.
