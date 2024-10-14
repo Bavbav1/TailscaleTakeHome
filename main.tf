@@ -37,7 +37,7 @@ resource "aws_security_group" "allow_ssh_and_tailscale" {
 }
 
 # Create an EC2 instance
-resource "aws_instance" "tailscale_router" {
+resource "aws_instance" "tailscale_routers" {
   ami           = "ami-0866a3c8686eaeeba"
   instance_type = "t2.micro"               
   key_name      = var.My-keys-tailscale
@@ -50,7 +50,7 @@ resource "aws_instance" "tailscale_router" {
     inline = [
       "sudo apt-get update -y",
       "curl -fsSL https://tailscale.com/install.sh | sh",
-      "sudo tailscale up --advertise-routes=172.31.32.0/20",
+      "sudo tailscale up --advertise-routes=${aws_instance.tailscale_routers.private_ip}/32",
       "sudo apt-get install openssh-server -y",
       "sudo systemctl enable ssh",
       "sudo systemctl start ssh"
@@ -60,11 +60,11 @@ resource "aws_instance" "tailscale_router" {
     type        = "ssh"
     user        = "ubuntu"  # Default user for Ubuntu AMIs
     private_key = file("/Users/tolabavery/Downloads/My-keys-tailscale.pem")  # Path to your private SSH key
-    host        = aws_instance.tailscale_router.public_ip  
+    host        = aws_instance.tailscale_routers.public_ip  
    }
   }
 
   tags = {
-    Name = "Subnet Router for Task1"
+    Name = "Subnet Router for Task2"
   }
 }
