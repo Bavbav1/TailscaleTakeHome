@@ -1,13 +1,35 @@
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
 }
 
-# this will create the security group to allow SSH and Tailscale traffic
+# Create a VPC
+resource "aws_vpc" "my_vpc" {
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = var.vpc_name
+  }
+}
+
+# Create a subnet within the VPC
+resource "aws_subnet" "my_subnet" {
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = var.subnet_cidr_block
+  availability_zone = var.availability_zone
+
+  tags = {
+    Name = var.subnet_name
+  }
+}
+
+# Create a security group to allow SSH and Tailscale traffic
 resource "aws_security_group" "allow_ssh_and_tailscale" {
   name        = "allow_ssh_and_tailscale"
   description = "Allow SSH and Tailscale inbound traffic"
+  vpc_id      = aws_vpc.my_vpc.id
 
-  # Allow SSH (port 22) from anywhere
   ingress {
     from_port   = 22
     to_port     = 22
@@ -15,7 +37,6 @@ resource "aws_security_group" "allow_ssh_and_tailscale" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow Tailscale traffic (port 41641 for P2P communication, UDP)
   ingress {
     from_port   = 41641
     to_port     = 41641
@@ -23,7 +44,6 @@ resource "aws_security_group" "allow_ssh_and_tailscale" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -36,35 +56,66 @@ resource "aws_security_group" "allow_ssh_and_tailscale" {
   }
 }
 
-# Create an EC2 instance
+# Create an EC2 instance in the newly created VPC and subnet using user_data
 resource "aws_instance" "tailscale_routers" {
-  ami           = "ami-0866a3c8686eaeeba"
-  instance_type = "t2.micro"               
-  key_name      = var.My-keys-tailscale
+  ami           = var.ami_id  # Use a variable for the AMI ID
+  instance_type = var.instance_type
+  key_name      = var.ssh_key_name
 
-  #Security Group settings
   vpc_security_group_ids = [aws_security_group.allow_ssh_and_tailscale.id]
+  subnet_id              = aws_subnet.my_subnet.id
 
-  # Subnet Routing
-  provisioner "remote-exec" {
-    inline = [
-      "sudo apt-get update -y",
-      "curl -fsSL https://tailscale.com/install.sh | sh",
-      "sudo tailscale up --advertise-routes=${aws_instance.tailscale_routers.private_ip}/32",
-      "sudo apt-get install openssh-server -y",
-      "sudo systemctl enable ssh",
-      "sudo systemctl start ssh"
-    ]
-    # Define how Terraform will connect via SSH
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"  # Default user for Ubuntu AMIs
-    private_key = file("/Users/tolabavery/Downloads/My-keys-tailscale.pem")  # Path to your private SSH key
-    host        = aws_instance.tailscale_routers.public_ip  
-   }
+  user_data = <<-EOF
+    #!/bin/bash
+    exec > >(tee /var/log/tailscale-user-data.log|logger -t tailscale-user-data -s 2>/dev/console) 2>&1
+
+    echo -e '\n#\n# Beginning Tailscale installation...\n#\n'
+
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+
+    apt-get -qq update
+    apt-get install -yqq tailscale
+
+    # Advertise the full VPC range and enable Tailscale's SSH
+    tailscale up --advertise-routes=${var.vpc_cidr_block} --ssh
+
+    echo -e '\n#\n# Tailscale installation complete.\n#\n'
+
+    # Check Tailscale connection status
+    tailscale status --peers=false 2>&1 1> /dev/null && echo -e '\n#\n# Tailscale status: connected\n#\n' || echo -e '\n#\n# Tailscale status: NOT connected\n#\n'
+  EOF
+
+  tags = {
+    Name = "Tailscale Subnet Router"
+  }
+}
+
+# Create an Internet Gateway
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  tags = {
+    Name = "My_Internet_Gateway"
+  }
+}
+
+# Create a route table
+resource "aws_route_table" "my_route_table" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.my_igw.id
   }
 
   tags = {
-    Name = "Subnet Router for Task2"
+    Name = "My_Route_Table"
   }
+}
+
+# Associate the subnet with the route table
+resource "aws_route_table_association" "my_subnet_association" {
+  subnet_id      = aws_subnet.my_subnet.id
+  route_table_id = aws_route_table.my_route_table.id
 }
